@@ -2042,7 +2042,7 @@ task.spawn(function()
         return
     end
 
-    Window:SetAuthExpire(status.auth_expire or 0)
+    Window:SetAuthExpire(status.data and status.data.auth_expire or 0)
 end)
 
                 Instances:Create("Frame", {
