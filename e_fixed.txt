@@ -5,7 +5,8 @@ if getgenv().Library then
     getgenv().Library:Unload()
 end
 
-local Library do 
+local Library = {}
+do
     local Workspace = game:GetService("Workspace")
     local UserInputService = game:GetService("UserInputService")
     local Players = game:GetService("Players")
@@ -1810,7 +1811,7 @@ local Library do
             return Watermark 
         end
 
-        Library:SetAuthExpire = function(self, authExpire)
+        Library.SetAuthExpire = function(self, authExpire)
         if self.CurrentWindow and self.CurrentWindow.SetAuthExpire then
             self.CurrentWindow:SetAuthExpire(authExpire)
         end
