@@ -1810,7 +1810,13 @@ local Library do
             return Watermark 
         end
 
-        Library.Window = function(self, Data)
+        Library:SetAuthExpire = function(self, authExpire)
+        if self.CurrentWindow and self.CurrentWindow.SetAuthExpire then
+            self.CurrentWindow:SetAuthExpire(authExpire)
+        end
+    end
+
+    Library.Window = function(self, Data)
             Data = Data or { }
 
             local Window = {
@@ -1935,14 +1941,18 @@ local function formatAuthExpire(authExpire)
     authExpire = tonumber(authExpire)
 
     if authExpire == 0 or authExpire == -1 then
-        return "Lifetime", true
+        return "Lifetime"
     end
 
     if not authExpire then
-        return "Unknown", false
+        return "Waiting..."
     end
 
     local remaining = math.max(0, authExpire - os.time())
+
+    if remaining <= 0 then
+        return "Expired"
+    end
 
     local days = math.floor(remaining / 86400)
     local hours = math.floor((remaining % 86400) / 3600)
@@ -1950,10 +1960,10 @@ local function formatAuthExpire(authExpire)
     local seconds = remaining % 60
 
     if days > 0 then
-        return string.format("%02dd %02dh %02dm %02ds", days, hours, minutes, seconds), false
+        return string.format("%02dd %02dh %02dm %02ds", days, hours, minutes, seconds)
     end
 
-    return string.format("%02dh %02dm %02ds", hours, minutes, seconds), false
+    return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
 end
 
 function Window:SetAuthExpire(authExpire)
@@ -1970,23 +1980,62 @@ function Window:SetAuthExpire(authExpire)
     end
 
     if not value then
-        Countdown.Text = "Unknown"
+        Countdown.Text = "Waiting..."
         return
     end
 
     local function updateExpiry()
-        local text = formatAuthExpire(value)
-        Countdown.Text = text
+        Countdown.Text = formatAuthExpire(value)
     end
 
     updateExpiry()
-
-    ExpiryConnection = RunService.Heartbeat:Connect(function()
-        updateExpiry()
-    end)
+    ExpiryConnection = RunService.Heartbeat:Connect(updateExpiry)
 end
 
-Window:SetAuthExpire(Data.AuthExpire)
+task.spawn(function()
+    if Data.AuthExpire ~= nil then
+        Window:SetAuthExpire(Data.AuthExpire)
+        return
+    end
+
+    local key =
+        rawget(getgenv(), "script_key") or
+        rawget(_G, "script_key") or
+        rawget(getgenv(), "_script_key") or
+        rawget(_G, "_script_key")
+
+    local scriptId =
+        Data.ScriptId or
+        rawget(getgenv(), "LUARMOR_SCRIPT_ID") or
+        rawget(_G, "LUARMOR_SCRIPT_ID")
+
+    if not key or not scriptId then
+        Countdown.Text = "Waiting..."
+        return
+    end
+
+    local ok, api = pcall(function()
+        return loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))()
+    end)
+
+    if not ok or type(api) ~= "table" then
+        Countdown.Text = "Unknown"
+        return
+    end
+
+    api.script_id = scriptId
+
+    local success, status = pcall(function()
+        return api.check_key(key)
+    end)
+
+    if not success or type(status) ~= "table" then
+        Countdown.Text = "Unknown"
+        return
+    end
+
+    Window:SetAuthExpire(status.auth_expire)
+end)
 
                 Instances:Create("Frame", {
                     Parent = Items["Sidebar"].Instance,
@@ -2109,6 +2158,7 @@ Window:SetAuthExpire(Data.AuthExpire)
                 })                
                 
                 Window.Items = Items
+                Library.CurrentWindow = Window
             end
             
             local Debounce = false
