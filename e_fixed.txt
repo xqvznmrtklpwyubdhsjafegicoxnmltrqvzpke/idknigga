@@ -1994,8 +1994,18 @@ function Window:SetAuthExpire(authExpire)
 end
 
 task.spawn(function()
-    if Data.AuthExpire ~= nil then
-        Window:SetAuthExpire(Data.AuthExpire)
+    local manualAuthExpire = Data.AuthExpire
+
+    if manualAuthExpire == nil then
+        manualAuthExpire = Data.auth_expire
+    end
+
+    if type(manualAuthExpire) == "table" then
+        manualAuthExpire = manualAuthExpire.auth_expire
+    end
+
+    if tonumber(manualAuthExpire) ~= nil then
+        Window:SetAuthExpire(manualAuthExpire)
         return
     end
 
@@ -2007,7 +2017,7 @@ task.spawn(function()
 
     local scriptId = "f36d0aff01b390350c437e8fe1f00a75"
 
-    if not key or not scriptId then
+    if not key or key == "" or not scriptId or scriptId == "" then
         Countdown.Text = "Waiting..."
         return
     end
@@ -2032,7 +2042,7 @@ task.spawn(function()
         return
     end
 
-    Window:SetAuthExpire(status.auth_expire)
+    Window:SetAuthExpire(status.auth_expire or 0)
 end)
 
                 Instances:Create("Frame", {
