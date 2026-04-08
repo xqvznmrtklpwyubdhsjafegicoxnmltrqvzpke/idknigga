@@ -2004,10 +2004,7 @@ task.spawn(function()
         rawget(getgenv(), "_script_key") or
         rawget(_G, "_script_key")
 
-    local scriptId =
-        Data.ScriptId or
-        rawget(getgenv(), "LUARMOR_SCRIPT_ID") or
-        rawget(_G, "LUARMOR_SCRIPT_ID")
+    local scriptId = "f36d0aff01b390350c437e8fe1f00a75"
 
     if not key or not scriptId then
         Countdown.Text = "Waiting..."
