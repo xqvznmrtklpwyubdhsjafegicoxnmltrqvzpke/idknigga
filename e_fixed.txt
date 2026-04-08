@@ -1928,19 +1928,65 @@ Countdown.FontFace = Library.Font
 Countdown.TextSize = 13
 Countdown.TextColor3 = Library.Theme.Accent
 
---// COUNTDOWN LOGIC
-local expiresDuration = tonumber(Data.ExpiresSeconds) or (24 * 60 * 60)
-local endTime = os.time() + math.max(0, math.floor(expiresDuration))
+--// AUTH EXPIRE LOGIC
+local ExpiryConnection
 
-RunService.Heartbeat:Connect(function()
-    local remaining = math.max(0, endTime - os.time())
+local function formatAuthExpire(authExpire)
+    authExpire = tonumber(authExpire)
 
-    local hours = math.floor(remaining / 3600)
+    if authExpire == 0 or authExpire == -1 then
+        return "Lifetime", true
+    end
+
+    if not authExpire then
+        return "Unknown", false
+    end
+
+    local remaining = math.max(0, authExpire - os.time())
+
+    local days = math.floor(remaining / 86400)
+    local hours = math.floor((remaining % 86400) / 3600)
     local minutes = math.floor((remaining % 3600) / 60)
     local seconds = remaining % 60
 
-    Countdown.Text = string.format("%02dh %02dm %02ds", hours, minutes, seconds)
-end)
+    if days > 0 then
+        return string.format("%02dd %02dh %02dm %02ds", days, hours, minutes, seconds), false
+    end
+
+    return string.format("%02dh %02dm %02ds", hours, minutes, seconds), false
+end
+
+function Window:SetAuthExpire(authExpire)
+    if ExpiryConnection then
+        ExpiryConnection:Disconnect()
+        ExpiryConnection = nil
+    end
+
+    local value = tonumber(authExpire)
+
+    if value == 0 or value == -1 then
+        Countdown.Text = "Lifetime"
+        return
+    end
+
+    if not value then
+        Countdown.Text = "Unknown"
+        return
+    end
+
+    local function updateExpiry()
+        local text = formatAuthExpire(value)
+        Countdown.Text = text
+    end
+
+    updateExpiry()
+
+    ExpiryConnection = RunService.Heartbeat:Connect(function()
+        updateExpiry()
+    end)
+end
+
+Window:SetAuthExpire(Data.AuthExpire)
 
                 Instances:Create("Frame", {
                     Parent = Items["Sidebar"].Instance,
